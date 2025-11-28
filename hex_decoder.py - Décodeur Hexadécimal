@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+"""
+Simple Hexadecimal Decoder
+Usage: python3 hex_decoder.py <hex_string>
+"""
+import sys
+
+def hex_decode(hex_string):
+    try:
+        hex_clean = hex_string.replace(" ", "")
+        decoded = bytes.fromhex(hex_clean).decode('utf-8')
+        return decoded
+    except Exception as e:
+        return f"Error: {e}"
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python3 hex_decoder.py <hex_string>")
+        sys.exit(1)
+    
+    hex_input = sys.argv[1]
+    result = hex_decode(hex_input)
+    print(result)
