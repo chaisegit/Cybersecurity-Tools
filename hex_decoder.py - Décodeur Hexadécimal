@@ -1,23 +1,70 @@
 #!/usr/bin/env python3
 """
-Simple Hexadecimal Decoder
-Usage: python3 hex_decoder.py <hex_string>
+Hexadecimal Decoder v2
+
+Usage exemples :
+  python3 hex_decoder.py "48656c6c6f"
+  echo "48656c6c6f" | python3 hex_decoder.py
+  python3 hex_decoder.py --encoding latin-1 "48656c6f"
 """
+
+import argparse
 import sys
 
-def hex_decode(hex_string):
+
+def hex_decode(hex_string, encoding="utf-8"):
+    hex_clean = hex_string.replace(" ", "").strip()
     try:
-        hex_clean = hex_string.replace(" ", "")
-        decoded = bytes.fromhex(hex_clean).decode('utf-8')
+        decoded = bytes.fromhex(hex_clean).decode(encoding)
         return decoded
     except Exception as e:
-        return f"Error: {e}"
+        raise ValueError(f"Invalid hex or encoding error: {e}")
+
+
+def read_input(arg_hex: str | None) -> str:
+    # 1) si un argument est fourni, on l'utilise
+    if arg_hex:
+        return arg_hex
+    # 2) sinon, on lit sur stdin (pipe ou entrée manuelle)
+    if not sys.stdin.isatty():
+        data = sys.stdin.read()
+        if data.strip():
+            return data
+    raise ValueError("No hex input provided (argument or stdin required).")
+
+def main():
+    parser = argparse.ArgumentParser(description="Simple hexadecimal decoder")
+    parser.add_argument(
+        "hex_string",
+        nargs="?",
+        help="Hex string to decode (optional, can be asked interactively).",
+    )
+    parser.add_argument(
+        "--encoding",
+        "-e",
+        default="utf-8",
+        help="Output encoding (default: utf-8).",
+    )
+    args = parser.parse_args()
+
+    try:
+        # 1) si un argument est donné, on l'utilise
+        if args.hex_string:
+            hex_input = args.hex_string
+        # 2) sinon, on demande à l'utilisateur
+        else:
+            hex_input = input("Enter hex string to decode: ").strip()
+            if not hex_input:
+                print("No hex provided, exiting.")
+                sys.exit(1)
+
+        result = hex_decode(hex_input, encoding=args.encoding)
+        print(result)
+        sys.exit(0)
+
+    except ValueError as e:
+        print(f"Error: {e}", file=sys.stderr)
+        sys.exit(1)
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python3 hex_decoder.py <hex_string>")
-        sys.exit(1)
-    
-    hex_input = sys.argv[1]
-    result = hex_decode(hex_input)
-    print(result)
+    main()
