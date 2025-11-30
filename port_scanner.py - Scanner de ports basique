@@ -1,42 +1,83 @@
 #!/usr/bin/env python3
 """
-Simple Port Scanner
-Usage: python3 port_scanner.py <target_ip>
+Simple Port Scanner v2
+Usage:
+  python3 port_scanner.py <target_ip>            # scan ports communs
+  python3 port_scanner.py <target_ip> --ports 1-1024
+  python3 port_scanner.py <target_ip> --ports 22,80,443
 """
+import argparse
 import socket
-import sys
 from datetime import datetime
 
-def scan_port(ip, port):
+
+def scan_port(ip, port, timeout=1):
     try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(1)
-        result = sock.connect_ex((ip, port))
-        sock.close()
-        return result == 0
-    except:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(timeout)
+            result = sock.connect_ex((ip, port))
+            return result == 0
+    except Exception:
         return False
 
-def scan_common_ports(target):
-    common_ports = [21, 22, 23, 25, 80, 443, 445, 3306, 3389, 8080]
-    print(f"\n[*] Scanning {target} for common ports...")
+
+def parse_ports(ports_arg):
+    # "1-1024" ou "22,80,443"
+    if "-" in ports_arg:
+        start, end = ports_arg.split("-", 1)
+        return range(int(start), int(end) + 1)
+    else:
+        return [int(p) for p in ports_arg.split(",") if p.strip()]
+
+
+def scan_ports(target, ports, timeout):
+    print(f"\n[*] Scanning {target} on {len(list(ports))} ports...")
     print(f"[*] Scan started at {datetime.now()}\n")
-    
+
     open_ports = []
-    for port in common_ports:
-        if scan_port(target, port):
+    for port in ports:
+        if scan_port(target, port, timeout=timeout):
             print(f"[+] Port {port} is OPEN")
             open_ports.append(port)
         else:
             print(f"[-] Port {port} is closed")
-    
+
     print(f"\n[*] Scan completed at {datetime.now()}")
-    print(f"[*] Found {len(open_ports)} open ports")
+    print(f"[*] Found {len(open_ports)} open ports: {open_ports if open_ports else 'none'}")
+
+def main():
+    common_ports = [21, 22, 23, 25, 80, 443, 445, 3306, 3389, 8080]
+
+    parser = argparse.ArgumentParser(description="Simple TCP port scanner")
+    parser.add_argument("target", nargs="?", help="Target IP or hostname")
+    parser.add_argument(
+        "--ports",
+        help="Ports to scan (ex: '1-1024' or '22,80,443'). Default = common ports list.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=float,
+        default=1.0,
+        help="Connection timeout in seconds (default: 1.0)",
+    )
+
+    args = parser.parse_args()
+
+    # Mode interactif si aucune cible fournie
+    target = args.target
+    if not target:
+        target = input("Enter target IP or hostname: ").strip()
+        if not target:
+            print("No target provided, exiting.")
+            return
+
+    if args.ports:
+        ports = parse_ports(args.ports)
+    else:
+        ports = common_ports
+
+    scan_ports(target, ports, args.timeout)
+
 
 if __name__ == "__main__":
-    if len(sys.argv) < 2:
-        print("Usage: python3 port_scanner.py <target_ip>")
-        sys.exit(1)
-    
-    target = sys.argv[1]
-    scan_common_ports(target)
+    main()
